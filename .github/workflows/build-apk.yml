@@ -1,0 +1,49 @@
+name: Build APK
+
+# Runs automatically on every push, and can be triggered manually
+# from the repo's "Actions" tab (Run workflow).
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to publish the APK as a downloadable Release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up the Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Build the debug APK
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      # Option A: grab the APK from the run's "Artifacts" section (a zip)
+      - name: Upload APK as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PasswordVault-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+      # Option B: publish a Release so the .apk is a direct, tap-to-install link
+      - name: Publish APK to a Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Password Vault build ${{ github.run_number }}
+          files: app/build/outputs/apk/debug/app-debug.apk
